@@ -23,7 +23,7 @@ export default ctx => {
       const f = ctx.under(ctx.project.dir, src); if (!f || !fs.existsSync(f)) throw new Error('Không thấy ảnh ' + src);
       const dst = f.replace(/\.\w+$/, '') + '_cut.png';
       job.step = 'Tách nền ảnh';
-      await ctx.run(ctx.PY, ['-I', '-c', 'import sys;from PIL import Image;from rembg import new_session,remove;remove(Image.open(sys.argv[1]),session=new_session("u2net_human_seg"),post_process_mask=True).save(sys.argv[2])', f, dst]);
+      await ctx.run(ctx.PY, ['-I', '-X', 'utf8', '-c', 'import sys;from PIL import Image;from rembg import new_session,remove;remove(Image.open(sys.argv[1]),session=new_session("u2net_human_seg"),post_process_mask=True).save(sys.argv[2])', f, dst]);
       job.out = { cutouts: relp(dst), still: true }; return;
     }
     const seq = src.seq || '';
@@ -33,7 +33,7 @@ export default ctx => {
     const want = Math.max(1, Math.round((b - a) * fps) + 1), count = () => (fs.existsSync(outDir) ? fs.readdirSync(outDir).length : 0), before = count();
     job.step = `Tách nền ${want} khung (rembg, chạy trên máy)`;
     const tick = setInterval(() => { job.progress = Math.min(.98, (count() - before) / want); }, 500);
-    try { await ctx.run(ctx.PY, ['-I', path.join(ctx.SKILL, 'scripts/segment.py'), frames, outDir, '--ranges', `${a.toFixed(2)}-${b.toFixed(2)}`, '--fps', String(fps)]); }
+    try { await ctx.run(ctx.PY, ['-I', '-X', 'utf8', path.join(ctx.SKILL, 'scripts/segment.py'), frames, outDir, '--ranges', `${a.toFixed(2)}-${b.toFixed(2)}`, '--fps', String(fps)]); }
     finally { clearInterval(tick); }
     job.out = { cutouts: relp(outDir) + '/%05d.png', n: count() };
   }
@@ -42,7 +42,7 @@ export default ctx => {
     fs.mkdirSync(ctx.P('media'), { recursive: true });
     const dst = ctx.P(`media/sticker_${ctx.stamp()}.png`);
     ctx.job.step = 'Cắt người + viền trắng (make_sticker.py)';
-    await ctx.run(ctx.PY, ['-I', path.join(ctx.SKILL, 'scripts/make_sticker.py'), f, dst, '--disc', disc, ...(emojis ? ['--emojis', emojis] : [])]);
+    await ctx.run(ctx.PY, ['-I', '-X', 'utf8', path.join(ctx.SKILL, 'scripts/make_sticker.py'), f, dst, '--disc', disc, ...(emojis ? ['--emojis', emojis] : [])]);
     ctx.job.out = { path: relp(dst) };
   }
   async function suggest({ model = 'sonnet', n = 8 }) {

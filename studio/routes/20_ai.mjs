@@ -40,12 +40,12 @@ export default ctx => {
       if (b.claude) {
         const ok = ctx.startJob('fillers', async () => {
           ctx.job.step = 'Dò lỗi nói + hỏi Claude câu nói hỏng (20–60 giây)'; ctx.job.progress = .2;
-          await ctx.run(ctx.PY, ['-I', ...fillArgs(b, inF, outF)]);
+          await ctx.run(ctx.PY, ['-I', '-X', 'utf8', ...fillArgs(b, inF, outF)]);
           ctx.job.out = '.studio/fillers.json';
         });
         return ctx.json(res, { ok, job: true }), true;
       }
-      return await new Promise(ok => execFile(ctx.PY, ['-I', ...fillArgs(b, inF, outF)], (e, out, err) => {
+      return await new Promise(ok => execFile(ctx.PY, ['-I', '-X', 'utf8', ...fillArgs(b, inF, outF)], (e, out, err) => {
         ctx.json(res, e ? { error: (err || e.message).slice(-400) } : JSON.parse(fs.readFileSync(outF, 'utf8')), e ? 500 : 200); ok(true);
       }));
     }

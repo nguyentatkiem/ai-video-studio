@@ -116,13 +116,32 @@
     $('#aig').value = { course: 'Khoá học', realestate: 'Bất động sản', review: 'Review', share: 'Chia sẻ' }[cur] || 'Khác';
     $('#aid').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; for (const x of $('#aid').children) x.classList.toggle('on', x === b); };
     $('#aipk').onfocus = () => { document.querySelector('[name=aip][value=pick]').checked = true; };
-    $('#aigo').onclick = startAi;
+    $('#aigo').onclick = () => startAi();
   }
-  async function startAi() {
+  // "Dựng AI tối đa": one click = AI build (style chosen by AI, dense graphics) + b-roll at the densest setting with
+  // Claude-picked presets and stock photos + rich sound. Same undo step; the user's own panel settings are left untouched.
+  const MAX_AF = { density: 'ratday', src: ['preset', 'text', 'emoji', 'media', 'stock'], claude: true, level: 'phongphu', music: true };
+  function openMaxModal() {
+    if (!CAP.length && S.needCaptions) return S.needCaptions(openMaxModal, 'Dựng AI tối đa');
+    S.modal(`<h3><i class="ti ti-rocket"></i> Dựng AI tối đa</h3>
+      <p class="muted" style="margin:2px 0 8px">Một lần bấm, làm như một editor: Claude chọn style hợp nội dung, sửa phụ đề, đặt 12–15 graphic chính, rồi chèn b-roll minh hoạ dày (~1 cảnh / 2–3 giây: biểu đồ, checklist, ảnh stock, chữ nổi, emoji), nhạc theo đoạn và SFX phong phú. Mất khoảng 2–4 phút. Hoàn tác bằng ⌘Z.</p>
+      <div class="row2"><div><label class="lbl">Mục tiêu video</label><select id="aig">${GOALS.map(g => `<option>${g}</option>`).join('')}</select></div>
+      <div><label class="lbl">Giọng điệu</label><select id="ait">${TONES.map(g => `<option>${g}</option>`).join('')}</select></div></div>
+      <label class="lbl">Yêu cầu thêm (tuỳ chọn)</label><textarea id="aix" placeholder="VD: nhấn mạnh con số, CTA là “nhắn tin để nhận tài liệu”…"></textarea>
+      <div class="actions"><button onclick="closeModal()">Huỷ</button><button class="primary" id="aimaxgo"><i class="ti ti-rocket"></i> Dựng</button></div>`);
+    $('#aig').value = { course: 'Khoá học', realestate: 'Bất động sản', review: 'Review', share: 'Chia sẻ' }[TL.pack] || 'Khác';
+    $('#aimaxgo').onclick = () => startAi({ goal: $('#aig').value, tone: $('#ait').value, pack: 'auto', density: 'day', extra: $('#aix').value.trim() }, MAX_AF);
+  }
+  async function startAi(preset, afOpts) {
     if (!CAP.length) return S.needCaptions(openAiModal, 'AI dựng giúp');
-    const pm = document.querySelector('[name=aip]:checked').value;
-    const body = { goal: $('#aig').value, tone: $('#ait').value, pack: pm === 'pick' ? $('#aipk').value : pm, density: $('#aid .on')?.dataset.d || 'vua', extra: $('#aix').value.trim() };
-    const af = !!$('#aiaf')?.checked; if (S.autofill && $('#aiaf')) S.autofill.afterAi = af;
+    let body, af;
+    if (preset && preset.goal != null) { body = preset; af = !!S.autofill; }
+    else {
+      const pm = document.querySelector('[name=aip]:checked').value;
+      body = { goal: $('#aig').value, tone: $('#ait').value, pack: pm === 'pick' ? $('#aipk').value : pm, density: $('#aid .on')?.dataset.d || 'vua', extra: $('#aix').value.trim() };
+      af = !!$('#aiaf')?.checked; if (S.autofill && $('#aiaf')) S.autofill.afterAi = af;
+      afOpts = null;
+    }
     await S.saveNow();
     const r = await S.api('/api/ai/edit', body);
     if (!r.ok) return S.toast(r.error || 'Đang có tác vụ khác chạy');
@@ -133,7 +152,7 @@
       const plan = await S.api('/api/ai/plan');
       if (plan.error) return S.toast(plan.error);
       lastPlan = plan; applyPlan(plan);
-      if (af && S.autofill) await S.autofill.run('all', { noUndo: true }); // same undo step as the AI build
+      if (af && S.autofill) await S.autofill.run('all', { noUndo: true, ...(afOpts ? { opts: afOpts } : {}) }); // same undo step as the AI build
       showResult(plan);
     });
   }
@@ -267,7 +286,10 @@
     if (a === 'none') { flSel.clear(); renderAi(); }
     if (a === 'cut') cutSelected();
   });
-  S.onReady(() => S.addTopButton(`<button class="ghost" id="aibtn" title="Claude đọc lời thoại và dựng graphic, phụ đề, nhạc, SFX"><i class="ti ti-wand"></i> AI dựng giúp</button>`, openAiModal));
+  S.onReady(() => {
+    S.addTopButton(`<button class="ghost" id="aibtn" title="Claude đọc lời thoại và dựng graphic, phụ đề, nhạc, SFX"><i class="ti ti-wand"></i> AI dựng giúp</button>`, openAiModal);
+    S.addTopButton(`<button class="ghost" id="aimaxbtn" title="AI dựng + b-roll minh hoạ dày + ảnh stock + âm thanh phong phú, một lần bấm"><i class="ti ti-rocket"></i> Dựng AI tối đa</button>`, openMaxModal);
+  });
 
   // ---------- Lời thoại: edit the video by deleting words ----------
   let tw = { a: -1, b: -1, drag: false, moved: false }, W = [];

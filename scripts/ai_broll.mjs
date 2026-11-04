@@ -168,7 +168,7 @@ Thêm "why" (≤ 12 từ tiếng Việt). Trả về DUY NHẤT một mảng JSO
 
 ${JSON.stringify(cands)}`;
   const r = await new Promise((ok, bad) => {
-    const p = spawnClaude(['-p', prompt, '--output-format', 'json', '--model', model], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawnClaude(['-p', '--output-format', 'json', '--model', model], { stdio: ['pipe', 'pipe', 'pipe'] }); p.stdin.on('error', () => {}); p.stdin.end(prompt);
     let o = '', e = ''; p.stdout.on('data', d => (o += d)); p.stderr.on('data', d => (e += d));
     p.on('error', () => bad(new Error('Không tìm thấy Claude Code CLI (lệnh "claude"). Cài Claude Code rồi đăng nhập để dùng gợi ý AI.')));
     p.on('close', code => {

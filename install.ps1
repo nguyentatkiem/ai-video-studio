@@ -33,7 +33,7 @@ function Need($cmd, $wingetId, $label, $url) {
 Say 'Kiểm tra công cụ'
 Need 'ffmpeg' 'Gyan.FFmpeg' 'ffmpeg' 'https://www.gyan.dev/ffmpeg/builds/'
 Need 'node' 'OpenJS.NodeJS.LTS' 'Node.js ≥ 18' 'https://nodejs.org'
-if ([int](node -p 'process.versions.node.split(".")[0]') -lt 18) { Die 'Node.js quá cũ (cần ≥ 18). Cài bản LTS mới tại https://nodejs.org' }
+if ([int](node -p 'parseInt(process.versions.node)') -lt 18) { Die 'Node.js quá cũ (cần ≥ 18). Cài bản LTS mới tại https://nodejs.org' }
 # python.exe in WindowsApps is only the Microsoft Store stub; prefer the py launcher, then a real python.exe
 $PY = $null
 if (Has 'py') { try { & py -3 -c 'import sys; sys.exit(sys.version_info < (3, 10))'; if ($LASTEXITCODE -eq 0) { $PY = @('py', '-3') } } catch {} }

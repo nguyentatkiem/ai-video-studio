@@ -7,6 +7,7 @@ A cut [a, b] is what to remove; the ripple (clips, captions, scenes, sfx) is don
 """
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -100,7 +101,7 @@ for i in range(n - 1):
 # 4. false starts (sentence restarted) — needs Claude
 note = None
 if a.claude:
-    exe = shutil.which("claude")
+    exe = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or next((f for f in (os.path.expanduser("~/.local/bin/claude.exe"), os.path.expanduser("~/.local/bin/claude")) if os.path.exists(f)), None)
     if not exe:
         note = "Không tìm thấy lệnh claude (Claude Code CLI) — bỏ qua phần câu nói hỏng."
     else:
@@ -109,7 +110,7 @@ if a.claude:
                   "nói lại từ đầu (false start), hoặc nói vấp/sửa lời. Chỉ đánh dấu phần BỊ BỎ (lần nói hỏng), không đánh dấu lần nói lại. Không đánh dấu tiếng đệm hay "
                   "từ lặp liền nhau (đã xử lý riêng). Nếu không có, trả mảng rỗng.\nTrả về DUY NHẤT JSON: {\"false_starts\":[{\"i0\":số,\"i1\":số,\"reason\":\"…\"}]}\n\n" + listing)
         try:
-            r = subprocess.run([exe, "-p", prompt, "--output-format", "json", "--model", a.model], capture_output=True, text=True, timeout=240)
+            r = subprocess.run([exe, "-p", "--output-format", "json", "--model", a.model], input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=240)
             j = json.loads(r.stdout)
             res = str(j.get("result", ""))
             if r.returncode or j.get("is_error"):

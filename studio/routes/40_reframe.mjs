@@ -17,7 +17,7 @@ export default ctx => {
     if (!fs.existsSync(cache) || fs.statSync(cache).mtimeMs < fs.statSync(dir).mtimeMs) {
       job.step = 'Dò mặt trong video (YuNet, offline)';
       const total = (c.src.count || fs.readdirSync(dir).length) / fps;
-      await ctx.run(ctx.PY, ['-I', S('face_track.py'), dir, '--src-fps', String(fps), '--fps', '5', '--out', cache], l => {
+      await ctx.run(ctx.PY, ['-I', '-X', 'utf8', S('face_track.py'), dir, '--src-fps', String(fps), '--fps', '5', '--out', cache], l => {
         const m = /^face ([\d.]+)s/.exec(l); if (m) job.progress = Math.min(.95, +m[1] / total);
       });
     }
@@ -29,7 +29,7 @@ export default ctx => {
     const job = ctx.job;
     job.step = translate ? 'Dịch phụ đề bằng Claude' : 'Tạo giọng lồng tiếng';
     let report = null;
-    await ctx.run(ctx.PY, ['-I', S('dub.py'), ctx.project.tlFile, '--lang', lang, '--tts', tts, ...(voice ? ['--voice', voice] : []),
+    await ctx.run(ctx.PY, ['-I', '-X', 'utf8', S('dub.py'), ctx.project.tlFile, '--lang', lang, '--tts', tts, ...(voice ? ['--voice', voice] : []),
       ...(voice_gain != null ? ['--voice-gain', String(voice_gain)] : []), ...(translate ? [] : ['--no-translate']), ...(dub ? [] : ['--no-tts']), ...(force ? ['--force'] : [])], l => {
       let m;
       if ((m = /^dịch (\d+)\/(\d+)/.exec(l))) { job.step = `Dịch phụ đề ${m[1]}/${m[2]} câu`; job.progress = .5 * m[1] / m[2]; }
@@ -42,7 +42,7 @@ export default ctx => {
     if (p === '/api/reframe' && req.method === 'POST') { const b = await ctx.body(req); ctx.json(res, { ok: ctx.startJob('reframe', reframe, b) }); return true; }
     if (p === '/api/dub' && req.method === 'POST') { const b = await ctx.body(req); ctx.json(res, { ok: ctx.startJob('dub', dub, b) }); return true; }
     if (p === '/api/dub/voices') {
-      execFile(ctx.PY, ['-I', S('dub.py'), '--voices', (u.searchParams.get('lang') || 'en').replace(/[^a-z]/g, '')], (e, out) => {
+      execFile(ctx.PY, ['-I', '-X', 'utf8', S('dub.py'), '--voices', (u.searchParams.get('lang') || 'en').replace(/[^a-z]/g, '')], (e, out) => {
         try { ctx.json(res, JSON.parse(out)); } catch { ctx.json(res, { say: [], edge: null }); }
       });
       return true;

@@ -26,7 +26,7 @@ export default ctx => async (req, res, p) => {
     job.step = 'Lấy tiếng nói từ video'; job.progress = .05;
     let src = null;
     try {
-      await ctx.run(ctx.PY, ['-I', S('mix_audio.py'), ctx.project.tlFile, '--stems']);
+      await ctx.run(ctx.PY, ['-I', '-X', 'utf8', S('mix_audio.py'), ctx.project.tlFile, '--stems']);
       if (fs.existsSync(P('.studio/stem_voice.wav'))) src = P('.studio/stem_voice.wav');
     } catch (e) { job.log += `\n(mix_audio: ${e.message})`; }
     if (!src && tl.audio?.voice && fs.existsSync(P(tl.audio.voice))) src = P(tl.audio.voice);
@@ -34,13 +34,13 @@ export default ctx => async (req, res, p) => {
     // 2. Whisper → words with timings.
     job.step = `Nhận dạng giọng nói (whisper ${model}${model === 'small' ? '' : ' — lần đầu sẽ tải model'})`; job.progress = .2;
     const words = P('.studio/words_auto.json');
-    await ctx.run(ctx.PY, ['-I', S('transcribe.py'), src, words, '--model', model, '--lang', lang]);
+    await ctx.run(ctx.PY, ['-I', '-X', 'utf8', S('transcribe.py'), src, words, '--model', model, '--lang', lang]);
     const W = JSON.parse(fs.readFileSync(words, 'utf8'));
     if (!W.length) throw new Error('Không nghe thấy lời nói nào trong video.');
     // 3. Karaoke chunks.
     job.step = 'Chia dòng phụ đề'; job.progress = .9;
     const capF = P('.studio/captions_auto.json');
-    await ctx.run(ctx.PY, ['-I', S('captions.py'), words, capF, '--max', String(max)]);
+    await ctx.run(ctx.PY, ['-I', '-X', 'utf8', S('captions.py'), words, capF, '--max', String(max)]);
     const caps = JSON.parse(fs.readFileSync(capF, 'utf8')).filter(c => c.t0 < (tl.duration || 1e9));
     if (old.length) fs.writeFileSync(P(`.studio/captions_backup_${ctx.stamp()}.json`), JSON.stringify(old));
     fs.mkdirSync(P('work'), { recursive: true });

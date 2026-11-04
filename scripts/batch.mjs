@@ -299,7 +299,7 @@ export async function buildRow(job, i, { preview = false, dirOverride, log = () 
     if (mode === 'beat') {
       if (!pics.length) throw new Error('chế độ ảnh theo nhịp cần ít nhất 1 ảnh');
       log('dựng ảnh theo nhịp nhạc (beat_project.py)');
-      await sh(PY, ['-I', path.join(HERE, 'beat_project.py'), path.join(dir, 'media'), dir, '--music', tpl.music || 'hype', '--dur', String(dur), '--title', title || tpl.title || '', ...(brand.phone ? ['--phone', brand.phone] : []), ...(brand.website ? ['--website', brand.website] : []), ...(vert ? [] : ['--horizontal'])]);
+      await sh(PY, ['-I', '-X', 'utf8', path.join(HERE, 'beat_project.py'), path.join(dir, 'media'), dir, '--music', tpl.music || 'hype', '--dur', String(dur), '--title', title || tpl.title || '', ...(brand.phone ? ['--phone', brand.phone] : []), ...(brand.website ? ['--website', brand.website] : []), ...(vert ? [] : ['--horizontal'])]);
       tl = sub(JSON.parse(fs.readFileSync(path.join(dir, 'timeline.json'), 'utf8')), new Map());
       Object.assign(tl, { width: w, height: h, brand: { ...(tl.brand || {}), ...brand } });
       tl = applyBrandTexts(tl, brand);
@@ -307,12 +307,12 @@ export async function buildRow(job, i, { preview = false, dirOverride, log = () 
       if (mode === 'video') {
         if (preview) throw new Error('xem trước không hỗ trợ dòng có video người nói (cần nhận giọng ~1 phút) — bấm Bắt đầu để dựng');
         const v = await resolveFile(video, ctx, dl), S = f => path.join(HERE, f);
-        log('nhận giọng nói (whisper)'); await sh(PY, ['-I', S('transcribe.py'), v, path.join(dir, 'work/words_raw.json'), '--model', job.model || 'small']);
-        log('cắt khoảng lặng'); await sh(PY, ['-I', S('cut.py'), v, path.join(dir, 'work/words_raw.json'), path.join(dir, 'work')]);
+        log('nhận giọng nói (whisper)'); await sh(PY, ['-I', '-X', 'utf8', S('transcribe.py'), v, path.join(dir, 'work/words_raw.json'), '--model', job.model || 'small']);
+        log('cắt khoảng lặng'); await sh(PY, ['-I', '-X', 'utf8', S('cut.py'), v, path.join(dir, 'work/words_raw.json'), path.join(dir, 'work')]);
         fs.mkdirSync(path.join(dir, 'work/frames'), { recursive: true });
         const [FW, FH] = vert ? [720, 1280] : [1280, 720];
         log('trích khung hình'); await sh('ffmpeg', ['-v', 'error', '-y', '-i', path.join(dir, 'work/aroll.mp4'), '-vf', `scale=${FW}:${FH}:force_original_aspect_ratio=increase,crop=${FW}:${FH}`, '-q:v', '3', path.join(dir, 'work/frames/%05d.jpg')]);
-        log('tạo phụ đề'); await sh(PY, ['-I', S('captions.py'), path.join(dir, 'work/words.json'), path.join(dir, 'work/captions.json'), '--max', '4']);
+        log('tạo phụ đề'); await sh(PY, ['-I', '-X', 'utf8', S('captions.py'), path.join(dir, 'work/words.json'), path.join(dir, 'work/captions.json'), '--max', '4']);
         caps = JSON.parse(fs.readFileSync(path.join(dir, 'work/captions.json'), 'utf8'));
         for (const c of caps) for (const w of c.words) w.w = w.w.replace(/[.,!?]+$/, '').toLowerCase();
         dur = +(fs.readdirSync(path.join(dir, 'work/frames')).length / 30 + 2.5).toFixed(2);
@@ -355,7 +355,7 @@ async function renderRow(dir, tl, onProgress) {
   fs.mkdirSync(path.join(dir, 'out'), { recursive: true });
   const tlFile = path.join(dir, 'timeline.json');
   if (tl.audio && (tl.audio.voice || tl.audio.music?.length || tl.audio.sfx?.length || tl.clips?.some(c => c.audio))) {
-    onProgress(0, 'trộn âm thanh'); await sh(PY, ['-I', path.join(HERE, 'mix_audio.py'), tlFile]);
+    onProgress(0, 'trộn âm thanh'); await sh(PY, ['-I', '-X', 'utf8', path.join(HERE, 'mix_audio.py'), tlFile]);
   }
   const out = path.join(dir, 'out', `${path.basename(dir)}.mp4`), part = out.replace(/\.mp4$/, '.part.mp4');
   onProgress(0, 'render');
