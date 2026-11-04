@@ -42,7 +42,7 @@ Chỉ trả về JSON đúng dạng, không giải thích:
 // claude -p … --output-format json → the model's text. onProc(child) lets callers kill it.
 export function askClaude(prompt, { model = 'sonnet', onProc } = {}) {
   return new Promise((ok, bad) => {
-    const pr = spawnClaude(['-p', prompt, '--output-format', 'json', '--model', model], { cwd: os.tmpdir(), env: process.env });
+    const pr = spawnClaude(['-p', '--output-format', 'json', '--model', model], { cwd: os.tmpdir(), env: process.env }); pr.stdin.on('error', () => {}); pr.stdin.end(prompt);
     onProc?.(pr); let out = '', err = '';
     pr.stdout.on('data', d => (out += d)); pr.stderr.on('data', d => (err += d));
     pr.on('error', e => bad(new Error(e.code === 'ENOENT' ? 'Không tìm thấy Claude Code CLI (lệnh `claude`). Cài Claude Code rồi chạy `claude` một lần để đăng nhập.' : e.message)));

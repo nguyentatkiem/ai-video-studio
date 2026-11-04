@@ -60,6 +60,7 @@ export function claudeCmd() {
   return (CLAUDE = [p || 'claude', []]);
 }
 export const claudeBin = () => claudeCmd()[0];
+if (IS_WIN && !process.env.CLAUDE_BIN) { const [exe, pre] = claudeCmd(); if (!pre.length && fs.existsSync(exe)) process.env.CLAUDE_BIN = exe; else CLAUDE = null; }
 export function spawnClaude(args, opts = {}) { const [exe, pre] = claudeCmd(); return spawn(exe, [...pre, ...args], opts); }
 export function execClaude(args, opts, cb) { const [exe, pre] = claudeCmd(); return execFile(exe, [...pre, ...args], opts, cb); }
 

@@ -300,7 +300,7 @@ Trả về DUY NHẤT một mảng JSON, không giải thích: [{"i":0,"id":"...
 
 ${JSON.stringify(req)}`;
     const out = await new Promise((ok, bad) => {
-      const p = spawnClaude(['-p', prompt, '--output-format', 'json', '--model', opt('--model', 'sonnet')], { stdio: ['ignore', 'pipe', 'pipe'] });
+      const p = spawnClaude(['-p', '--output-format', 'json', '--model', opt('--model', 'sonnet')], { stdio: ['pipe', 'pipe', 'pipe'] }); p.stdin.on('error', () => {}); p.stdin.end(prompt);
       let o = '', e = ''; const tm = setTimeout(() => { p.kill(); bad(new Error('Claude quá 150 giây')); }, 150000);
       p.stdout.on('data', d => (o += d)); p.stderr.on('data', d => (e += d));
       p.on('error', () => { clearTimeout(tm); bad(new Error('Không tìm thấy Claude Code CLI (lệnh "claude")')); });

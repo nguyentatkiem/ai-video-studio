@@ -47,10 +47,10 @@ def say_voices(lang):
 
 
 def claude(prompt):
-    exe = shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
-    if not os.path.exists(exe):
+    exe = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or next((f for f in (os.path.expanduser("~/.local/bin/claude.exe"), os.path.expanduser("~/.local/bin/claude")) if os.path.exists(f)), None)
+    if not exe:
         raise SystemExit("Không tìm thấy Claude Code CLI (lệnh `claude`) để dịch. Cài Claude Code hoặc tự điền trường tr cho phụ đề.")
-    r = subprocess.run([exe, "-p", prompt, "--output-format", "json", "--model", "sonnet"], capture_output=True, text=True, timeout=600)
+    r = subprocess.run([exe, "-p", "--output-format", "json", "--model", "sonnet"], input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=600)
     if r.returncode:
         raise SystemExit(f"Claude CLI lỗi khi dịch: {(r.stderr or r.stdout)[-300:]}")
     res = json.loads(r.stdout).get("result", "")
