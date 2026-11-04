@@ -64,7 +64,7 @@ function run(cmd, argv, onLine, { cwd } = {}) {
       CUR = null;
       if (code === 0) return ok(log);
       const msg = (log.match(/^LỖI: .*$/m) || [])[0]?.slice(5) || log.trim().split('\n').slice(-2).join(' | ').slice(-300);
-      bad(Object.assign(new Error(`${path.basename(argv[0] && /\.(mjs|py)$/.test(argv[argv[0] === '-I' ? 1 : 0]) ? argv[argv[0] === '-I' ? 1 : 0] : cmd)} lỗi (mã ${code}): ${msg}`), { log }));
+      bad(Object.assign(new Error(`${path.basename(argv.find(x => /\.(mjs|py)$/.test(x)) || cmd)} lỗi (mã ${code}): ${msg}`), { log }));
     });
   });
 }
@@ -134,7 +134,7 @@ async function exportProject(dir, { quality = '1080', aspects = [] }, say) {
   let mix = null;
   if (tl.audio && (tl.audio.voice || tl.audio.music?.length || tl.audio.sfx?.length || tl.audio.tracks?.length || tl.clips?.some(c => c.audio))) {
     say(.03, 'Trộn âm thanh (giọng + nhạc + SFX, −14 LUFS)');
-    await run(PY, ['-I', S('mix_audio.py'), tlFile]);
+    await run(PY, ['-I', '-X', 'utf8', S('mix_audio.py'), tlFile]);
     mix = P(rd(tlFile)?.audio?.mix || tl.audio.mix || 'work/mix.wav');
     if (!fs.existsSync(mix)) throw new Error('Trộn âm thanh không tạo ra file ' + path.relative(dir, mix));
   }
@@ -233,7 +233,7 @@ export async function autopilot(input, { profile: profId, out: outDir, project: 
       const inF = P('.studio/autopilot/fillers_in.json'), outF = P('.studio/autopilot/fillers.json');
       fs.writeFileSync(inF, JSON.stringify(caps));
       sayS(.2, prof.fillers_claude ? 'Dò + hỏi Claude câu nói hỏng' : 'Dò tiếng đệm, lặp từ, chỗ ngắt');
-      await run(PY, ['-I', S('fillers.py'), inF, outF, ...(prof.fillers_claude ? ['--claude'] : [])]);
+      await run(PY, ['-I', '-X', 'utf8', S('fillers.py'), inF, outF, ...(prof.fillers_claude ? ['--claude'] : [])]);
       const cuts = (rd(outF)?.cuts || []).filter(c => c.conf >= .6);
       if (!cuts.length) return 'không có lỗi nói cần cắt';
       const r = rippleCut(tl, caps, cuts.map(c => [c.a, c.b]), frameCount(dir, tl));
@@ -276,7 +276,7 @@ export async function autopilot(input, { profile: profId, out: outDir, project: 
       const aiBed = (loadTL(dir).tl.audio?.music || []).some(m => m._ai);
       const musicAuto = prof.music === 'auto' && !aiBed;
       if (prof.sound && prof.sound !== 'off') {
-        await run(PY, ['-I', S('auto_sfx.py'), P('timeline.json'), '--level', prof.sound, '--music', musicAuto ? 'auto' : 'keep']);
+        await run(PY, ['-I', '-X', 'utf8', S('auto_sfx.py'), P('timeline.json'), '--level', prof.sound, '--music', musicAuto ? 'auto' : 'keep']);
         notes.push(`SFX mức ${prof.sound}${musicAuto ? ' + nhạc theo đoạn' : aiBed && prof.music === 'auto' ? ' + nhạc AI chọn' : ''}`);
       }
       const { tl, caps, capFile } = loadTL(dir); tl.audio = tl.audio || {};

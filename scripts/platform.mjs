@@ -7,6 +7,18 @@ import { spawn, execFile, execFileSync } from 'node:child_process';
 
 export const IS_WIN = process.platform === 'win32', IS_MAC = process.platform === 'darwin';
 
+// Windows: Python's stdout defaults to the ANSI code page (cp1252…), so printing Vietnamese text crashes with
+// UnicodeEncodeError. Every child process inherits process.env, so force UTF-8 I/O for all Python scripts here.
+if (IS_WIN) { process.env.PYTHONUTF8 ??= '1'; process.env.PYTHONIOENCODING ??= 'utf-8'; }
+
+// Stop a child and everything it started (ffmpeg, Chrome…). Windows has no process groups and .kill() skips the child's
+// SIGTERM handlers, so use taskkill /T there; elsewhere keep the usual SIGTERM (group kill when `group` is set).
+export function killTree(p, { group = false } = {}) {
+  if (!p?.pid) return;
+  if (IS_WIN) { try { spawn('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }).on('error', () => p.kill()); } catch { try { p.kill(); } catch {} } return; }
+  try { group ? process.kill(-p.pid, 'SIGTERM') : p.kill('SIGTERM'); } catch {}
+}
+
 const winDirs = () => [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA].filter(Boolean);
 export function findChrome() {
   const c = [process.env.CHROME_PATH,

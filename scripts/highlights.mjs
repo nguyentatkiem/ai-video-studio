@@ -59,7 +59,7 @@ async function transcript(src, model, dur) {
   const t0 = Date.now(), segs = [];
   say(.01, `Nhận dạng giọng nói toàn bộ video (whisper ${model}, ${mmss(dur)})`);
   // whisper segments (printed by transcribe.py) are the phrase boundaries: Vietnamese output has almost no punctuation
-  await sh(PY, ['-I', S('transcribe.py'), src, f + '.part', '--model', model], { onLine: l => {
+  await sh(PY, ['-I', '-X', 'utf8', S('transcribe.py'), src, f + '.part', '--model', model], { onLine: l => {
     const m = /^\[\s*([\d.]+)-\s*([\d.]+)\]/.exec(l);
     if (!m) return;
     segs.push([+m[1], +m[2]]);
@@ -237,7 +237,7 @@ export async function buildProject(src, h, dir, o, info, words, onStep = () => {
   const ws = words.slice(h.w0, h.w1 + 1).map(w => ({ w: w.w, s: r3(Math.max(0, w.s - h.t0)), e: r3(Math.min(h.t1 - h.t0, w.e - h.t0)) }));
   fs.writeFileSync(W('words_raw.json'), JSON.stringify(ws, null, 1));
   onStep('cắt khoảng lặng');
-  await sh(PY, ['-I', S('cut.py'), W('source.mp4'), W('words_raw.json'), path.join(dir, 'work')]);
+  await sh(PY, ['-I', '-X', 'utf8', S('cut.py'), W('source.mp4'), W('words_raw.json'), path.join(dir, 'work')]);
   const vertSrc = info.h > info.w, vert = o.orient !== 'horizontal';
   const mode = vert && !vertSrc ? 'reframe' : !vert && vertSrc ? 'blurfill' : 'crop';
   const [FW, FH] = vert ? [720, 1280] : [1280, 720];
@@ -249,7 +249,7 @@ export async function buildProject(src, h, dir, o, info, words, onStep = () => {
   if (mode === 'reframe') {
     onStep('bám mặt (đổi khung ngang → dọc)');
     const cache = path.join(dir, '.studio/facetrack/work_frames.json'); fs.mkdirSync(path.dirname(cache), { recursive: true });
-    await sh(PY, ['-I', S('face_track.py'), path.join(dir, 'work/frames'), '--src-fps', '30', '--fps', '5', '--out', cache]);
+    await sh(PY, ['-I', '-X', 'utf8', S('face_track.py'), path.join(dir, 'work/frames'), '--src-fps', '30', '--fps', '5', '--out', cache]);
     track = JSON.parse(fs.readFileSync(cache, 'utf8'));
     face = { x: 360, y: 538 };
     clips = [{ src: { seq: 'work/frames/%05d.jpg', fps: 30, count }, audio: 'work/aroll.mp4', in: 0, out: dur, fit: 'cover', ar: r3(track.w / track.h),
@@ -258,10 +258,10 @@ export async function buildProject(src, h, dir, o, info, words, onStep = () => {
     clips = [{ src: { seq: 'work/frames/%05d.jpg', fps: 30, count }, audio: 'work/aroll.mp4', in: 0, out: dur, fit: 'blurfill' }];
   } else {
     onStep('tìm vị trí mặt');
-    await sh(PY, ['-I', S('find_face.py'), path.join(dir, 'work/frames'), '--design', `${FW}x${FH}`], { onLine: l => { try { const f = JSON.parse(l); if (f.x != null) face = f; } catch {} } }).catch(() => {});
+    await sh(PY, ['-I', '-X', 'utf8', S('find_face.py'), path.join(dir, 'work/frames'), '--design', `${FW}x${FH}`], { onLine: l => { try { const f = JSON.parse(l); if (f.x != null) face = f; } catch {} } }).catch(() => {});
   }
   onStep('tạo phụ đề');
-  await sh(PY, ['-I', S('captions.py'), W('words.json'), W('captions.json'), '--max', '4']);
+  await sh(PY, ['-I', '-X', 'utf8', S('captions.py'), W('words.json'), W('captions.json'), '--max', '4']);
   const caps = JSON.parse(fs.readFileSync(W('captions.json'), 'utf8'));
   for (const c of caps) for (const w of c.words) w.w = w.w.replace(/[.,!?]+$/, '').toLowerCase();
   fs.writeFileSync(W('captions.json'), JSON.stringify(caps, null, 1));
@@ -297,7 +297,7 @@ export async function exportProject(dir, { quality = '1080', onProgress = () => 
   let mix = null;
   if (tl.audio && (tl.audio.voice || tl.audio.music?.length || tl.audio.sfx?.length || tl.audio.tracks?.length || tl.clips?.some(c => c.audio))) {
     onProgress(0, 'trộn âm thanh');
-    await sh(PY, ['-I', S('mix_audio.py'), tlFile]);
+    await sh(PY, ['-I', '-X', 'utf8', S('mix_audio.py'), tlFile]);
     mix = path.resolve(dir, tl.audio.mix || 'work/mix.wav');
   }
   const vert = (tl.height || 720) > (tl.width || 1280), [Wd, Hd] = quality === '720' ? [720, 1280] : [1080, 1920];

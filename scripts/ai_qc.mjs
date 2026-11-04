@@ -68,7 +68,7 @@ export async function openEngine(dir, { scale = .75 } = {}) {
     args: ['--allow-file-access-from-files', '--disable-web-security', '--force-color-profile=srgb', '--hide-scrollbars', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'] });
   const page = (await browser.pages())[0] || await browser.newPage();
   const E = { browser, page, dir, scale, failed: [], errors: [], curT: null };
-  page.on('requestfailed', r => { const u = r.url(); if (u.startsWith('file:')) E.failed.push({ url: decodeURIComponent(u.replace(/^file:\/\//, '')), t: E.curT }); });
+  page.on('requestfailed', r => { const u = r.url(); if (u.startsWith('file:')) E.failed.push({ url: fileURLToPath(u), t: E.curT }); });
   page.on('pageerror', e => E.errors.push(String(e.message || e).slice(0, 200)));
   await page.goto(pathToFileURL(path.join(SKILL, 'engine/index.html')).href, { waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {});
   await page.evaluate(() => {
@@ -348,7 +348,7 @@ async function audioPass(tl, dir, qcDir) {
   const tmp = path.join(dir, `.qc_mix_${process.pid}.json`), mix = path.join(qcDir, 'mix.wav');
   const t = deep(tl); t.audio.mix = path.relative(dir, mix);
   fs.writeFileSync(tmp, JSON.stringify(t));
-  try { await runP(PY, ['-I', path.join(SKILL, 'scripts/mix_audio.py'), tmp, '--stems'], { cwd: dir }); } finally { fs.rmSync(tmp, { force: true }); }
+  try { await runP(PY, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/mix_audio.py'), tmp, '--stems'], { cwd: dir }); } finally { fs.rmSync(tmp, { force: true }); }
   const issues = [], stats = {};
   const { err } = await runP('ffmpeg', ['-nostats', '-i', mix, '-af', 'ebur128=peak=true', '-f', 'null', '-']);
   const I = /I:\s+(-?[\d.]+) LUFS/.exec(err.split('Summary:').pop()), TP = /Peak:\s+(-?[\d.]+|-inf) dBFS/.exec(err.split('Summary:').pop());

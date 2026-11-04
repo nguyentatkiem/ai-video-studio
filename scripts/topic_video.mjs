@@ -228,7 +228,7 @@ async function main() {
   // 3. forced alignment: transcribe the TTS audio, align to the script words
   say(.46, 'Căn thời gian từng chữ (nhận giọng lại bản đọc)');
   let heard = [];
-  try { await sh(PY, ['-I', S('transcribe.py'), path.join(out, 'work/voice.wav'), path.join(out, 'work/words_tts.json'), '--model', opt('--model', 'small')]); heard = JSON.parse(fs.readFileSync(path.join(out, 'work/words_tts.json'), 'utf8')); }
+  try { await sh(PY, ['-I', '-X', 'utf8', S('transcribe.py'), path.join(out, 'work/voice.wav'), path.join(out, 'work/words_tts.json'), '--model', opt('--model', 'small')]); heard = JSON.parse(fs.readFileSync(path.join(out, 'work/words_tts.json'), 'utf8')); }
   catch (e) { console.error('nhận giọng bản đọc lỗi, chia thời gian theo số ký tự: ' + e.message); }
   for (const L of lines) L.words = alignLine(L.say, L.s, L.e, heard);
   const matched = lines.reduce((a, L) => a + L.words.length, 0);
@@ -260,7 +260,7 @@ async function main() {
     for (const [i, L] of lines.filter(L => L.kind === 'beat' && (L.visual || 'broll') === 'broll').entries()) {
       say(.57, `Tìm ảnh stock ${i + 1}: ${L.broll || L.screen}`);
       try {
-        const r = await sh(PY, ['-I', S('broll_fetch.py'), String(L.broll || L.screen), path.join(out, 'media/stock'), '--kind', 'photo', '--n', '1']);
+        const r = await sh(PY, ['-I', '-X', 'utf8', S('broll_fetch.py'), String(L.broll || L.screen), path.join(out, 'media/stock'), '--kind', 'photo', '--n', '1']);
         const f = fs.existsSync(path.join(out, 'media/stock')) ? fs.readdirSync(path.join(out, 'media/stock')).filter(x => /\.(jpe?g|png|webp)$/i.test(x) && !pics.includes('media/stock/' + x)) : [];
         if (f.length) { pics.push('media/stock/' + f[0]); L.pic = 'media/stock/' + f[0]; }
         void r;
@@ -301,7 +301,7 @@ async function main() {
 
   // 5. music + SFX
   say(.62, 'Nhạc nền + SFX theo cảnh');
-  try { await sh(PY, ['-I', S('auto_sfx.py'), tlFile, '--level', 'vua', '--music', 'auto']); }
+  try { await sh(PY, ['-I', '-X', 'utf8', S('auto_sfx.py'), tlFile, '--level', 'vua', '--music', 'auto']); }
   catch (e) { console.error('auto_sfx lỗi (giữ nhạc mặc định): ' + e.message.slice(0, 200)); }
   // auto_sfx may replace music beds: keep them under the TTS voice
   const tl2 = JSON.parse(fs.readFileSync(tlFile, 'utf8'));

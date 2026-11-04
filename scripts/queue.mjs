@@ -15,6 +15,7 @@ import crypto from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { notify } from './notify.mjs';
+import { killTree } from './platform.mjs';
 
 const SKILL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const AVS_HOME = process.env.AVS_HOME || path.join(os.homedir(), '.ai-video-studio');
@@ -108,7 +109,7 @@ export class Runner {
   start() { if (!this.timer) { this.timer = setInterval(() => this.tick().catch(e => this.log('queue:', e.message)), 2000); this.tick().catch(() => {}); } return this; }
   stop({ requeue = true } = {}) {
     clearInterval(this.timer); this.timer = null;
-    if (this.child) { try { process.kill(-this.child.pid, 'SIGTERM'); } catch {} }
+    if (this.child) { killTree(this.child, { group: true }); }
     if (this.item && requeue) mutate(q => { const it = q.items.find(x => x.id === this.item.id); if (it && it.state === 'running') Object.assign(it, { state: 'queued', step: 'Bị dừng — sẽ chạy tiếp', runner: null }); });
     unlock();
   }
@@ -123,7 +124,7 @@ export class Runner {
       if (this.daemon && st.watch.on) this.scan(st);
       if (this.child) {
         const it = loadQueue().items.find(x => x.id === this.item.id);
-        if (it?.cancel) { this.cancelled = true; try { process.kill(-this.child.pid, 'SIGTERM'); } catch {} }
+        if (it?.cancel) { this.cancelled = true; killTree(this.child, { group: true }); }
       } else {
         const next = loadQueue().items.find(x => x.state === 'queued');
         if (next) this.runItem(next); else if (!this.daemon && Date.now() - this.idleSince > 1500) { this.stop(); this.onIdle?.(); }
@@ -147,7 +148,7 @@ export class Runner {
     this.cancelled = false;
     const argv = argsFor(it0);
     this.log(`queue: chạy ${it0.kind} ${it0.input} (lần ${attempt})`);
-    const p = spawn('node', [script, ...argv], { cwd: SKILL, detached: true, env: process.env });
+    const p = spawn('node', [script, ...argv], { cwd: SKILL, detached: true, env: process.env, windowsHide: true });
     this.child = p;
     let log = '', last = 0, pending = {}, result = null;
     const flush = (force) => { if (force || Date.now() - last > 1000) { last = Date.now(); upd({ ...pending, log: log.slice(-1500) }); pending = {}; } };

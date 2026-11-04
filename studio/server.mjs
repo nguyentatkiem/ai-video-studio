@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, execFile } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { openPath, pyBin, revealPath } from '../scripts/platform.mjs';
+import { killTree, openPath, pyBin, revealPath } from '../scripts/platform.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SKILL = path.resolve(HERE, '..');
@@ -246,7 +246,7 @@ async function exportVideo({ quality = '1080', from, to, aspects }) {
   let mix = null;
   if (tl.audio && (tl.audio.voice || tl.audio.music?.length || tl.audio.sfx?.length || tl.audio.tracks?.length || tl.clips?.some(c => c.audio))) {
     job.step = 'Trộn âm thanh (giọng + nhạc + SFX, -14 LUFS)';
-    await run(PY, ['-I', path.join(SKILL, 'scripts/mix_audio.py'), project.tlFile]);
+    await run(PY, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/mix_audio.py'), project.tlFile]);
     mix = P(tl.audio.mix || 'work/mix.wav');
     if (!fs.existsSync(mix)) throw new Error('Trộn âm thanh không tạo ra file ' + path.relative(project.dir, mix));
   }
@@ -287,7 +287,7 @@ function startJob(kind, fn, payload) {
 }
 // Server stopped (app quit, Ctrl+C) while a job runs: stop it (render.mjs then closes its Chromes) and drop this run's temp timelines.
 for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => {
-  if (job?.state === 'running') job.proc?.kill('SIGTERM');
+  if (job?.state === 'running') killTree(job.proc);
   if (project) for (const f of [`.export_${process.pid}.json`, `.still_${process.pid}.json`, `.cover_${process.pid}.json`]) fs.rmSync(path.join(project.dir, f), { force: true });
   setTimeout(() => process.exit(0), 300);
 });
@@ -363,7 +363,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/new' && req.method === 'POST') { const b = await body(req); const ok = startJob('new', newProject, b); return json(res, ok ? { ok } : { ok, error: 'Đang có tác vụ khác chạy' }); }
     if (p === '/api/autosfx' && req.method === 'POST') {
       const b = await body(req);
-      return execFile(PY, ['-I', path.join(SKILL, 'scripts/auto_sfx.py'), project.tlFile, ...(b.keep ? ['--keep-manual'] : [])], (e, out, err) =>
+      return execFile(PY, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/auto_sfx.py'), project.tlFile, ...(b.keep ? ['--keep-manual'] : [])], (e, out, err) =>
         e ? json(res, { error: (err || e.message).slice(-500) }, 500) : json(res, readProject()));
     }
     if (p === '/api/media') return json(res, mediaList());
@@ -374,7 +374,7 @@ const server = http.createServer(async (req, res) => {
       const out = `out/${path.basename(project.dir)}.srt`; fs.writeFileSync(P(out), srt(captions)); return json(res, { out });
     }
     if (p === '/api/job') return json(res, job ? { ...job, proc: undefined } : null);
-    if (p === '/api/job/cancel' && req.method === 'POST') { if (job?.state === 'running') job.cancelled = true; if (job?.proc) job.proc.kill('SIGTERM'); return json(res, { ok: true }); }
+    if (p === '/api/job/cancel' && req.method === 'POST') { if (job?.state === 'running') job.cancelled = true; if (job?.proc) killTree(job.proc); return json(res, { ok: true }); }
     if (p === '/api/open' && req.method === 'POST') { const b = await body(req); openProject(b.path); return json(res, { ok: true }); }
     if (p === '/api/reveal' && req.method === 'POST') { const b = await body(req); const f = under(project.dir, b.path || ''); if (f) revealPath(f); return json(res, { ok: !!f }); }
     if (p === '/api/features') return json(res, FEATURES());

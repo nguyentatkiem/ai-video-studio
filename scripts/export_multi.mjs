@@ -48,7 +48,7 @@ export async function deriveAspects(src, aspects, opts = {}) {
   if (todo.some(a => !(vert && a === '16:9'))) {
     step('Dò mặt trên bản đã xuất (để cắt khung bám mặt)');
     const tj = path.join(outDir, `.${base}_face.json`);
-    await run(py, ['-I', path.join(SKILL, 'scripts/face_track.py'), src, '--fps', '5', '--out', tj]);
+    await run(py, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/face_track.py'), src, '--fps', '5', '--out', tj]);
     keys = JSON.parse(fs.readFileSync(tj, 'utf8')).keys; fs.rmSync(tj, { force: true });
     if (!keys.length) keys = [{ t: 0, ox: 50, oy: 42 }];
   }

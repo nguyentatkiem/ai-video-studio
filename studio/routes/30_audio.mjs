@@ -32,7 +32,7 @@ export default ctx => async (req, res, p, u) => {
       // the original is loudness-matched to the cleaned one (-16 LUFS) so A/B judges clarity, not volume
       await Promise.all([
         sh('ffmpeg', ['-v', 'error', '-y', '-ss', String(ss), '-t', String(dur), '-i', f, '-vn', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=7,aresample=48000', '-ac', '2', A]),
-        sh(ctx.PY, ['-I', path.join(ctx.SKILL, 'scripts/voice_clean.py'), f, B, '--preset', preset === 'off' ? 'vua' : preset, '--json', JSON.stringify(over), '--ss', String(ss), '--t', String(dur)]),
+        sh(ctx.PY, ['-I', '-X', 'utf8', path.join(ctx.SKILL, 'scripts/voice_clean.py'), f, B, '--preset', preset === 'off' ? 'vua' : preset, '--json', JSON.stringify(over), '--ss', String(ss), '--t', String(dur)]),
       ]);
     } catch (e) { return json(res, { error: 'Không tạo được bản nghe thử: ' + e.message }, 500), true; }
     return json(res, { a: path.relative(project.dir, A), b: path.relative(project.dir, B) }), true;
@@ -40,7 +40,7 @@ export default ctx => async (req, res, p, u) => {
   if (p === '/api/audio/mix' && req.method === 'POST') {
     const ok = ctx.startJob('mix', async () => {
       ctx.job.step = 'Trộn âm thanh (làm sạch giọng, hạ nhạc, track phụ, -14 LUFS)';
-      await ctx.run(ctx.PY, ['-I', path.join(ctx.SKILL, 'scripts/mix_audio.py'), project.tlFile]);
+      await ctx.run(ctx.PY, ['-I', '-X', 'utf8', path.join(ctx.SKILL, 'scripts/mix_audio.py'), project.tlFile]);
       const tl = JSON.parse(fs.readFileSync(project.tlFile, 'utf8'));
       ctx.job.out = tl.audio?.mix || 'work/mix.wav';
     }, {});

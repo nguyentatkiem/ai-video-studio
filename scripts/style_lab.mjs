@@ -544,7 +544,7 @@ async function generate(kind) {
 }
 function analyze(video, work, p0 = 0, p1 = 1) {
   return new Promise((ok, bad) => {
-    const p = child = spawn(PY, ['-I', path.join(SKILL, 'scripts/style_analyze.py'), path.resolve(video), work, '--model', opt('--whisper', 'small'), '--lang', opt('--lang', 'vi')], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = child = spawn(PY, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/style_analyze.py'), path.resolve(video), work, '--model', opt('--whisper', 'small'), '--lang', opt('--lang', 'vi')], { stdio: ['ignore', 'pipe', 'pipe'] });
     let err = '';
     p.stdout.on('data', d => String(d).split('\n').forEach(l => { const m = /^@@ ([\d.]+) (.*)$/.exec(l); if (m) say(p0 + (p1 - p0) * +m[1], 'Phân tích video: ' + m[2]); }));
     p.stderr.on('data', d => (err += d));

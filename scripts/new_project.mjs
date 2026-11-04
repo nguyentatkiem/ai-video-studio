@@ -49,9 +49,9 @@ export async function newProject({ video, dir, model = 'small', pack = 'slate', 
   fs.mkdirSync(path.join(d, 'work/frames'), { recursive: true });
   const S = f => path.join(SKILL, 'scripts', f);
   onStep('Nhận dạng giọng nói (whisper)', .05);
-  await run(PY, ['-I', S('transcribe.py'), src, path.join(d, 'work/words_raw.json'), '--model', model, ...(lang && lang !== 'vi' ? ['--lang', lang] : [])]);
+  await run(PY, ['-I', '-X', 'utf8', S('transcribe.py'), src, path.join(d, 'work/words_raw.json'), '--model', model, ...(lang && lang !== 'vi' ? ['--lang', lang] : [])]);
   onStep('Cắt khoảng lặng', .45);
-  await run(PY, ['-I', S('cut.py'), src, path.join(d, 'work/words_raw.json'), path.join(d, 'work')]);
+  await run(PY, ['-I', '-X', 'utf8', S('cut.py'), src, path.join(d, 'work/words_raw.json'), path.join(d, 'work')]);
   onStep(`Trích khung hình ${orient === 'horizontal' ? '16:9' : '9:16'}`, .6);
   const [FW, FH] = orient === 'horizontal' ? [1280, 720] : [720, 1280];
   // stale frames from an interrupted earlier run would make the clip longer than the audio
@@ -60,9 +60,9 @@ export async function newProject({ video, dir, model = 'small', pack = 'slate', 
   // timeline.face (bubble / PIP / hook anchor): find_face.py on a few frames; keep the default if no person is found.
   onStep('Tìm vị trí mặt', .75);
   let face = orient === 'horizontal' ? { x: 640, y: 300 } : { x: 360, y: 520 };
-  await run(PY, ['-I', S('find_face.py'), path.join(d, 'work/frames'), '--design', `${FW}x${FH}`], l => { try { const f = JSON.parse(l); if (f.x != null) face = f; } catch {} }).catch(() => {});
+  await run(PY, ['-I', '-X', 'utf8', S('find_face.py'), path.join(d, 'work/frames'), '--design', `${FW}x${FH}`], l => { try { const f = JSON.parse(l); if (f.x != null) face = f; } catch {} }).catch(() => {});
   onStep('Tạo phụ đề', .85);
-  await run(PY, ['-I', S('captions.py'), path.join(d, 'work/words.json'), path.join(d, 'work/captions.json'), '--max', '4']);
+  await run(PY, ['-I', '-X', 'utf8', S('captions.py'), path.join(d, 'work/words.json'), path.join(d, 'work/captions.json'), '--max', '4']);
   const caps = JSON.parse(fs.readFileSync(path.join(d, 'work/captions.json'), 'utf8'));
   for (const c of caps) for (const w of c.words) w.w = w.w.replace(/[.,!?]+$/, '').toLowerCase();
   fs.writeFileSync(path.join(d, 'work/captions.json'), JSON.stringify(caps, null, 1));

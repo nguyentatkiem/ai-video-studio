@@ -144,7 +144,7 @@ async function exportProject(dir, quality, onP) {
   const vert = (tl.height || 720) > (tl.width || 1280), [W, H] = quality === '1080' ? [1080, 1920] : [720, 1280];
   let mix = null;
   if (tl.audio && (tl.audio.voice || tl.audio.music?.length || tl.clips?.some(c => c.audio))) {
-    await run(PY, ['-I', path.join(SKILL, 'scripts/mix_audio.py'), tlFile], dir);
+    await run(PY, ['-I', '-X', 'utf8', path.join(SKILL, 'scripts/mix_audio.py'), tlFile], dir);
     mix = path.resolve(dir, tl.audio.mix || 'work/mix.wav');
   }
   fs.mkdirSync(path.join(dir, 'out'), { recursive: true });
