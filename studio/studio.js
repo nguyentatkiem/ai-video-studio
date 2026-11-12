@@ -857,7 +857,9 @@ const sfxUrl = name => { const f = LIB.sfx.find(x => x.replace(/\.\w+$/, '') ===
 const dbVol = g => clamp(Math.pow(10, (g ?? -12) / 20) * 2.2, 0, 1);
 let musicEls = [], lastT = 0, clock0 = 0, curClip = -1;
 const clipAud = new Map();
-const audFor = src => { if (!clipAud.has(src)) clipAud.set(src, Object.assign(new Audio('/project/' + src), { preload: 'auto' })); return clipAud.get(src); };
+// Preview from the AAC copy the server extracts (browsers play iPhone .mov audio silently); export keeps the original.
+const previewSrc = src => (typeof MEDIA !== 'undefined' && MEDIA.find(m => m.path === src)?.preview_audio) || src;
+const audFor = src => { const p = previewSrc(src); if (!clipAud.has(p)) clipAud.set(p, Object.assign(new Audio('/project/' + p), { preload: 'auto' })); return clipAud.get(p); };
 // Main-track audio follows the clips: right source time, speed (pitch kept), volume, mute.
 function syncClipAudio(force) {
   let want = null;

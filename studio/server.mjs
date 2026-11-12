@@ -150,6 +150,20 @@ function waveform(cb) {
 
 // ---------- media library (<project>/media) ----------
 const IMG = /\.(jpe?g|png|webp|gif|svg)$/i, VID = /\.(mp4|mov|m4v|webm|mkv)$/i, AUD = /\.(mp3|wav|m4a|aac|flac|ogg)$/i;
+// Browsers play iPhone .mov (AAC + Apple spatial-audio track) silently, so the editor previews a clip's sound from
+// <name>_frames/audio.m4a (first audio stream as AAC). Export still mixes the original file through ffmpeg.
+const audioPending = new Set();
+function extractAudio(src, fr, cb = () => {}) {
+  const out = path.join(fr, 'audio.m4a');
+  if (fs.existsSync(out) || audioPending.has(out)) return cb();
+  audioPending.add(out);
+  const tmp = path.join(fr, '.audio.tmp.m4a');
+  execFile('ffmpeg', ['-v', 'error', '-y', '-i', src, '-map', '0:a:0?', '-vn', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', tmp], e => {
+    audioPending.delete(out);
+    if (!e && fs.existsSync(tmp) && fs.statSync(tmp).size > 1024) fs.renameSync(tmp, out); else fs.rmSync(tmp, { force: true });
+    cb();
+  });
+}
 function mediaList() {
   const d = P('media'); if (!fs.existsSync(d)) return [];
   return fs.readdirSync(d).filter(f => !f.startsWith('.') && (IMG.test(f) || VID.test(f) || AUD.test(f))).sort().map(f => {
@@ -159,6 +173,8 @@ function mediaList() {
     if (kind === 'video' && fs.existsSync(fr)) {
       const n = fs.readdirSync(fr).filter(x => x.endsWith('.jpg')).length;
       it.seq = { seq: `media/${path.basename(fr)}/%05d.jpg`, fps: 30, count: n }; it.thumb = `media/${path.basename(fr)}/00001.jpg`; it.dur = +(n / 30).toFixed(2);
+      if (fs.existsSync(path.join(fr, 'audio.m4a'))) it.preview_audio = `media/${path.basename(fr)}/audio.m4a`;
+      else extractAudio(P(`media/${f}`), fr); // videos imported before this existed: ready on the next list
     }
     if (kind === 'image') it.thumb = it.path;
     return it;
@@ -177,7 +193,7 @@ function upload(req, name) {
       const fr = P(`media/${safe.replace(/\.\w+$/, '')}_frames`);
       fs.mkdirSync(fr, { recursive: true });
       execFile('ffmpeg', ['-v', 'error', '-y', '-i', dst, '-vf', 'fps=30,scale=w=1280:h=1280:force_original_aspect_ratio=decrease', '-q:v', '3', path.join(fr, '%05d.jpg')],
-        e => (e ? bad(e) : ok({ name: safe })));
+        e => (e ? bad(e) : extractAudio(dst, fr, () => ok({ name: safe }))));
     });
   });
 }
