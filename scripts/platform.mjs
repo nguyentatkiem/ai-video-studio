@@ -48,8 +48,20 @@ export function claudeCmd() {
   return (CLAUDE = [p || 'claude', []]);
 }
 export const claudeBin = () => claudeCmd()[0];
-export function spawnClaude(args, opts = {}) { const [exe, pre] = claudeCmd(); return spawn(exe, [...pre, ...args], opts); }
-export function execClaude(args, opts, cb) { const [exe, pre] = claudeCmd(); return execFile(exe, [...pre, ...args], opts, cb); }
+// Claude subscription for the app: a long-lived token from `claude setup-token` in ~/.ai-video-studio/claude-token
+// (or CLAUDE_CODE_OAUTH_TOKEN) so the app does not share the CLI's rotating login. Session variables inherited from a
+// Claude Code session that started the server are dropped (they die with that session). --setting-sources "" keeps the
+// user's ~/.claude/CLAUDE.md and settings out of video prompts. ANTHROPIC_API_KEY, if set, still wins (billed API).
+const TOKEN_FILE = path.join(process.env.AVS_HOME || path.join(os.homedir(), '.ai-video-studio'), 'claude-token');
+function claudeEnv(env = process.env) {
+  const e = { ...env };
+  for (const k of Object.keys(e)) if (k === 'CLAUDECODE' || (k.startsWith('CLAUDE_CODE_') && k !== 'CLAUDE_CODE_OAUTH_TOKEN')) delete e[k];
+  if (!e.CLAUDE_CODE_OAUTH_TOKEN) try { const t = fs.readFileSync(TOKEN_FILE, 'utf8').trim(); if (t) e.CLAUDE_CODE_OAUTH_TOKEN = t; } catch { /* CLI login */ }
+  return e;
+}
+const claudeArgs = args => (args.includes('--setting-sources') ? args : [...args, '--setting-sources', '']);
+export function spawnClaude(args, opts = {}) { const [exe, pre] = claudeCmd(); return spawn(exe, [...pre, ...claudeArgs(args)], { ...opts, env: claudeEnv(opts.env) }); }
+export function execClaude(args, opts = {}, cb) { const [exe, pre] = claudeCmd(); return execFile(exe, [...pre, ...claudeArgs(args)], { ...opts, env: claudeEnv(opts.env) }, cb); }
 
 // Stop a child and everything it started. On Windows kill() is a hard TerminateProcess that skips the child's own cleanup
 // (render.mjs closing its Chromes/ffmpeg), so the whole tree goes through taskkill instead.
